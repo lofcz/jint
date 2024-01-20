@@ -38,6 +38,15 @@ var coolingObject = {
 ");
     }
 
+    [Fact]
+    public void JsArgumentsIsPublic()
+    {
+        // debuggers might want to access the information
+        var obj = new Engine().Execute("function f() { return arguments; }").Evaluate("f('a', 'b', 'c');");
+        var arguments = Assert.IsType<JsArguments>(obj);
+        Assert.Equal((uint) 3, arguments.Length);
+    }
+
     private sealed class SetTimeoutEmulator : IDisposable
     {
         private readonly Engine _engine;

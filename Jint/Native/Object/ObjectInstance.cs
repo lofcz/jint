@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -6,10 +5,8 @@ using Jint.Collections;
 using Jint.Native.Array;
 using Jint.Native.BigInt;
 using Jint.Native.Boolean;
-using Jint.Native.Function;
 using Jint.Native.Json;
 using Jint.Native.Number;
-using Jint.Native.RegExp;
 using Jint.Native.String;
 using Jint.Native.Symbol;
 using Jint.Native.TypedArray;
@@ -527,8 +524,7 @@ namespace Jint.Native.Object
         {
             if ((_type & InternalTypes.PlainObject) != InternalTypes.Empty && property is JsString jsString)
             {
-                var key = (Key) jsString.ToString();
-                if (_properties?.TryGetValue(key, out var ownDesc) == true)
+                if (_properties?.TryGetValue(jsString.ToString(), out var ownDesc) == true)
                 {
                     if ((ownDesc._flags & PropertyFlag.Writable) != PropertyFlag.None)
                     {

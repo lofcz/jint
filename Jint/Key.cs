@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Jint.Extensions;
 
 namespace Jint
 {
@@ -10,20 +11,20 @@ namespace Jint
     [DebuggerDisplay("{" + nameof(Name) + "}")]
     internal readonly struct Key : IEquatable<Key>
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Key(string name)
         {
             Name = name;
-            HashCode = StringComparer.Ordinal.GetHashCode(name);
+            HashCode = Hash.GetFNVHashCode(name);
         }
 
         internal readonly string Name;
         internal readonly int HashCode;
 
-        public static implicit operator Key(string name)
-        {
-            return new Key(name);
-        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Key(string name) => new(name);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator string(Key key) => key.Name;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,16 +37,6 @@ namespace Jint
         public static bool operator !=(in Key a, in Key b)
         {
             return a.HashCode != b.HashCode || !string.Equals(a.Name, b.Name, StringComparison.Ordinal);
-        }
-
-        public static bool operator ==(in Key a, string b)
-        {
-            return string.Equals(a.Name, b, StringComparison.Ordinal);
-        }
-
-        public static bool operator !=(in Key a, string b)
-        {
-            return !string.Equals(a.Name, b, StringComparison.Ordinal);
         }
 
         public bool Equals(Key other)

@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Esprima.Ast;
 using Jint.Native.Object;
-using Jint.Native.Proxy;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Environments;
@@ -21,7 +20,7 @@ namespace Jint.Native.Function
         protected internal PropertyDescriptor? _length;
         internal PropertyDescriptor? _nameDescriptor;
 
-        protected internal Environment? _environment;
+        internal Environment? _environment;
         internal readonly JintFunctionDefinition _functionDefinition = null!;
         internal readonly FunctionThisMode _thisMode;
         internal JsValue _homeObject = Undefined;

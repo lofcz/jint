@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Jint.Native;
-using Jint.Native.Object;
 using Jint.Native.Symbol;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
@@ -3421,6 +3420,33 @@ try {
             engine.Evaluate("test.metadata['abc'] = 123");
             var result = engine.Evaluate("test.metadata['abc']");
             Assert.Equal("from-wrapper", result);
+        }
+
+        [Fact]
+        public void ShouldRespectConcreteGenericReturnTypes()
+        {
+            var engine = new Engine(opt =>
+            {
+                opt.AddExtensionMethods(typeof(Enumerable)); // Allow LINQ extension methods.
+            });
+
+            var result = new List<string>();
+            void Debug(object? o)
+            {
+                result.Add($"{o?.GetType().Name ?? "null"}: {o ?? "null"}");
+            }
+
+            engine.SetValue("debug", Debug);
+            engine.SetValue("dict", new Dictionary<string, string> { ["test"] = "val" });
+
+            engine.Execute("var t = dict.last(kvp => { debug(kvp); debug(kvp.key); return kvp.key != null; } );");
+            engine.Execute("debug(t); debug(t.key);");
+
+            Assert.Equal(4, result.Count);
+            Assert.Equal("KeyValuePair`2: [test, val]", result[0]);
+            Assert.Equal("String: test", result[1]);
+            Assert.Equal("KeyValuePair`2: [test, val]", result[2]);
+            Assert.Equal("String: test", result[3]);
         }
     }
 }

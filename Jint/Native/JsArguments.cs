@@ -1,5 +1,4 @@
 using System.Threading;
-using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Native.Symbol;
 using Jint.Runtime;
@@ -8,15 +7,15 @@ using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Environments;
 using Jint.Runtime.Interop;
 
-namespace Jint.Native.Argument
+namespace Jint.Native
 {
     /// <summary>
     /// https://tc39.es/ecma262/#sec-arguments-exotic-objects
     /// </summary>
-    internal sealed class JsArguments : ObjectInstance
+    public sealed class JsArguments : ObjectInstance
     {
         // cache property container for array iteration for less allocations
-        private static readonly ThreadLocal<HashSet<string>> _mappedNamed = new(() => new HashSet<string>(StringComparer.Ordinal));
+        private static readonly ThreadLocal<HashSet<Key>> _mappedNamed = new(() => []);
 
         private Function.Function _func = null!;
         private Key[] _names = null!;
@@ -102,9 +101,13 @@ namespace Jint.Native.Argument
             DefinePropertyOrThrow(GlobalSymbolRegistry.Iterator, new PropertyDescriptor(iteratorFunction, PropertyFlag.Writable | PropertyFlag.Configurable));
         }
 
-        public ObjectInstance? ParameterMap { get; set; }
+        internal ObjectInstance? ParameterMap { get; set; }
+
+        internal override bool IsArrayLike => true;
 
         internal override bool IsIntegerIndexedArray => true;
+
+        public uint Length => (uint) _args.Length;
 
         public override PropertyDescriptor GetOwnProperty(JsValue property)
         {
@@ -154,7 +157,7 @@ namespace Jint.Native.Argument
 
             if (desc.IsAccessorDescriptor())
             {
-                if (!(desc.Set is ICallable setter))
+                if (desc.Set is not ICallable setter)
                 {
                     return false;
                 }
@@ -179,7 +182,7 @@ namespace Jint.Native.Argument
 
             EnsureInitialized();
 
-            if (!(_func is null) && !ReferenceEquals(ParameterMap, null))
+            if (!ReferenceEquals(ParameterMap, null))
             {
                 var map = ParameterMap;
                 var isMapped = map.GetOwnProperty(property);
@@ -220,7 +223,7 @@ namespace Jint.Native.Argument
         {
             EnsureInitialized();
 
-            if (!(_func is null) && !ReferenceEquals(ParameterMap, null))
+            if (!ReferenceEquals(ParameterMap, null))
             {
                 var map = ParameterMap;
                 var isMapped = map.GetOwnProperty(property);

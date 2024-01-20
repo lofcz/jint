@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using Esprima;
 using Esprima.Ast;
 using Jint.Native;
-using Jint.Native.Argument;
 using Jint.Native.Function;
 using Jint.Native.Generator;
 using Jint.Native.Object;
@@ -19,7 +18,6 @@ using Jint.Runtime.Interop;
 using Jint.Runtime.Interop.Reflection;
 using Jint.Runtime.Interpreter;
 using Jint.Runtime.Interpreter.Expressions;
-using Jint.Runtime.References;
 using Environment = Jint.Runtime.Environments.Environment;
 
 namespace Jint
@@ -377,7 +375,7 @@ namespace Jint
         public Engine Execute(Script script)
         {
             var strict = _isStrict || script.Strict;
-            ExecuteWithConstraints(strict, () => ScriptEvaluation(new ScriptRecord(Realm, script, string.Empty)));
+            ExecuteWithConstraints(strict, () => ScriptEvaluation(new ScriptRecord(Realm, script, script.Location.Source)));
 
             return this;
         }
@@ -942,11 +940,10 @@ namespace Jint
         {
             var hoistingScope = script.GetHoistingScope();
             var functionDeclarations = hoistingScope._functionDeclarations;
-            var lexDeclarations = hoistingScope._lexicalDeclarations;
 
             var functionToInitialize = new List<JintFunctionDefinition>();
-            var declaredFunctionNames = new HashSet<string>(StringComparer.Ordinal);
-            var declaredVarNames = new List<string>();
+            var declaredFunctionNames = new HashSet<Key>();
+            var declaredVarNames = new List<Key>();
 
             var realm = Realm;
 
@@ -955,7 +952,7 @@ namespace Jint
                 for (var i = functionDeclarations.Count - 1; i >= 0; i--)
                 {
                     var d = functionDeclarations[i];
-                    var fn = d.Id!.Name;
+                    var fn = (Key) d.Id!.Name;
                     if (!declaredFunctionNames.Contains(fn))
                     {
                         var fnDefinable = env.CanDeclareGlobalFunction(fn);
@@ -1015,7 +1012,7 @@ namespace Jint
             for (var i = functionToInitialize.Count - 1; i > -1; i--)
             {
                 var f = functionToInitialize[i];
-                var fn = f.Name!;
+                Key fn = f.Name!;
 
                 if (env.HasLexicalDeclaration(fn))
                 {
@@ -1260,14 +1257,14 @@ namespace Jint
 
             var functionDeclarations = hoistingScope._functionDeclarations;
             var functionsToInitialize = new LinkedList<JintFunctionDefinition>();
-            var declaredFunctionNames = new HashSet<string>(StringComparer.Ordinal);
+            var declaredFunctionNames = new HashSet<Key>();
 
             if (functionDeclarations != null)
             {
                 for (var i = functionDeclarations.Count - 1; i >= 0; i--)
                 {
                     var d = functionDeclarations[i];
-                    var fn = d.Id!.Name;
+                    Key fn = d.Id!.Name;
                     if (!declaredFunctionNames.Contains(fn))
                     {
                         if (varEnvRec is GlobalEnvironment ger)
@@ -1285,8 +1282,8 @@ namespace Jint
                 }
             }
 
-            var boundNames = new List<string>();
-            var declaredVarNames = new List<string>();
+            var boundNames = new List<Key>();
+            var declaredVarNames = new List<Key>();
             var variableDeclarations = hoistingScope._variablesDeclarations;
             var variableDeclarationsCount = variableDeclarations?.Count;
             for (var i = 0; i < variableDeclarationsCount; i++)
@@ -1322,7 +1319,7 @@ namespace Jint
                 d.GetBoundNames(boundNames);
                 for (var j = 0; j < boundNames.Count; j++)
                 {
-                    var dn = boundNames[j];
+                    Key dn = boundNames[j];
                     if (d.IsConstantDeclaration())
                     {
                         lexEnvRec.CreateImmutableBinding(dn, strict: true);
@@ -1336,14 +1333,14 @@ namespace Jint
 
             foreach (var f in functionsToInitialize)
             {
-                var fn = f.Name!;
                 var fo = realm.Intrinsics.Function.InstantiateFunctionObject(f, lexEnv, privateEnv);
                 if (varEnvRec is GlobalEnvironment ger)
                 {
-                    ger.CreateGlobalFunctionBinding(fn, fo, canBeDeleted: true);
+                    ger.CreateGlobalFunctionBinding(f.Name!, fo, canBeDeleted: true);
                 }
                 else
                 {
+                    Key fn = f.Name!;
                     var bindingExists = varEnvRec.HasBinding(fn);
                     if (!bindingExists)
                     {
@@ -1596,7 +1593,7 @@ namespace Jint
             clearMethod?.Invoke(_objectWrapperCache, Array.Empty<object>());
 #endif
         }
-        
+
         [DebuggerDisplay("Engine")]
         private sealed class EngineDebugView
         {
