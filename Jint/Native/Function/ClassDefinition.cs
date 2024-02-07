@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Esprima;
 using Esprima.Ast;
 using Esprima.Utils;
@@ -19,6 +20,7 @@ internal sealed class ClassDefinition
     internal static readonly MethodDefinition _emptyConstructor;
 
     internal readonly string? _className;
+    private readonly string _classSource;
     private readonly Expression? _superClass;
     private readonly ClassBody _body;
 
@@ -39,10 +41,12 @@ internal sealed class ClassDefinition
 
     public ClassDefinition(
         string? className,
+        string classSource,
         Expression? superClass,
         ClassBody body)
     {
         _className = className;
+        _classSource = classSource;
         _superClass = superClass;
         _body = body;
     }
@@ -145,6 +149,7 @@ internal sealed class ClassDefinition
             F = constructorInfo.Closure;
 
             F.SetFunctionName(_className ?? "");
+            F._sourceText = _classSource;
 
             F.MakeConstructor(writableProperty: false, proto);
             F._constructorKind = _superClass is null ? ConstructorKind.Base : ConstructorKind.Derived;
@@ -359,6 +364,10 @@ internal sealed class ClassDefinition
         {
             var methodDef = method.DefineMethod(obj);
             methodDef.Closure.SetFunctionName(methodDef.Key);
+            // TODO currently in the SourceText retrieved from Esprima, the method name is incorrect, so for now, use a regular replacement.
+#pragma warning disable MA0009
+            methodDef.Closure._sourceText = new Regex("function").Replace(methodDef.Closure.ToString(), methodDef.Key.AsString(), 1);
+#pragma warning restore MA0009
             return DefineMethodProperty(obj, methodDef.Key, methodDef.Closure, enumerable);
         }
 
